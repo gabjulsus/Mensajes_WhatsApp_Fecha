@@ -3,6 +3,7 @@ using System.Diagnostics.Contracts;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using System.Data.SqlClient;
+using System.Text.RegularExpressions;
 
 namespace Mensajes_WhatsApp
 
@@ -60,6 +61,7 @@ namespace Mensajes_WhatsApp
                 Console.WriteLine(id);
                 string JsonMsb=await u.JsMsgbyId(id);
                 sr3.WriteLine(id);
+                if (id.Length < 7) continue;
                 List<ChatMessage> chatMessages = JsonConvert.DeserializeObject<List<ChatMessage>>(JsonMsb);
                 string connectionString = "Data Source=127.0.0.1;Initial Catalog=AdminProp;Integrated Security=SSPI;";
                 SqlConnection connection = new SqlConnection(connectionString);
@@ -74,6 +76,20 @@ namespace Mensajes_WhatsApp
                         DateTime fecha_local = fecha.ToLocalTime();
                         string StrFecha = fecha_local.ToString("dd/MM/yyyy");
                         DateTime fecha_insert = DateTime.Parse(StrFecha);
+
+
+                        // Insertar celular bloqueado
+                        string textoEnMiniscula = message.Body.ToString().ToString().ToLower(); 
+                        if (textoEnMiniscula.Contains("baja") && !message.FromMe)
+                        {
+                            SqlCommand bloqueo = new SqlCommand("CelularInsertar", connection);
+                            bloqueo.CommandType = System.Data.CommandType.StoredProcedure;
+                            
+                            bloqueo.Parameters.AddWithValue("@celular", Regex.Replace(message.From, "[^0-9]", ""));
+                            bloqueo.ExecuteNonQuery();  
+                        }
+
+                        //
 
                         SqlCommand command = new SqlCommand("InsertChatMessage", connection);
                         command.CommandType = System.Data.CommandType.StoredProcedure;
